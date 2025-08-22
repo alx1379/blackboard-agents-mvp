@@ -270,8 +270,8 @@ Look for patterns like:
 - Repetitive or low-value content
 - Agents asking for content that's already available
 
-When you detect problematic behavior, post a brief, polite correction like:
-"[agent-name] please [specific guidance]"
+When you detect problematic behavior, post a brief, direct correction like:
+[agent-name] stop [specific guidance]
 
 Examples:
 - "writer-agent please keep responses under 100 words"
