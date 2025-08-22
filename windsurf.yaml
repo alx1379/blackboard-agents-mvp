@@ -1,0 +1,107 @@
+name: agent-blackboard-mvp
+language: python
+type: console
+
+dependencies:
+  - openai
+  - rich
+
+entrypoint: main.py
+
+files:
+  main.py: |
+    from blackboard import Blackboard
+    from router import Router
+    from agents import GrammarAgent, EditorAgent
+
+    def main():
+        bb = Blackboard()
+        router = Router(bb)
+
+        # Create agents with their goals/prompts
+        agents = [
+            GrammarAgent("Fix grammar in drafts", bb),
+            EditorAgent("Improve style of drafts", bb),
+        ]
+
+        # Example user input
+        user_message = "This are test sentence with error."
+        bb.post("user", user_message)
+
+        # Agents take turns checking the blackboard
+        for agent in agents:
+            agent.try_act()
+
+        # Show results
+        print("\n=== Blackboard messages ===")
+        for msg in bb.messages:
+            print(f"{msg['from']}: {msg['content']}")
+
+    if __name__ == "__main__":
+        main()
+
+  blackboard.py: |
+    class Blackboard:
+        def __init__(self):
+            self.messages = []
+
+        def post(self, sender, content):
+            self.messages.append({"from": sender, "content": content})
+
+        def last_message(self):
+            return self.messages[-1] if self.messages else None
+
+  router.py: |
+    from rich.console import Console
+
+    console = Console()
+
+    class Router:
+        def __init__(self, blackboard):
+            self.blackboard = blackboard
+
+        def decide(self, agent_goal, context_window=1):
+            """
+            Very naive router:
+            Compares agent goal to last message and decides if agent should act.
+            Later can be replaced with LLM-based semantic router.
+            """
+            last = self.blackboard.last_message()
+            if not last:
+                return False
+
+            if any(word in last["content"].lower() for word in ["error", "fix", "edit", "draft"]):
+                return True
+            return False
+
+  agents.py: |
+    from router import Router
+
+    class BaseAgent:
+        def __init__(self, goal, blackboard):
+            self.goal = goal
+            self.blackboard = blackboard
+            self.router = Router(blackboard)
+
+        def try_act(self):
+            if self.router.decide(self.goal):
+                self.act()
+
+        def act(self):
+            raise NotImplementedError
+
+    class GrammarAgent(BaseAgent):
+        def act(self):
+            last = self.blackboard.last_message()
+            if last:
+                # toy "grammar fix"
+                fixed = last["content"].replace("are", "is")
+                self.blackboard.post("grammar-agent", fixed)
+
+    class EditorAgent(BaseAgent):
+        def act(self):
+            last = self.blackboard.last_message()
+            if last:
+                # toy "editor improvement"
+                improved = last["content"].capitalize()
+                self.blackboard.post("editor-agent", improved)
