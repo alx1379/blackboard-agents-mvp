@@ -15,7 +15,7 @@ from rich.layout import Layout
 from config import Config
 from blackboard import Blackboard
 from router import Router
-from agents import WriterAgent, EditorAgent, GrammarAgent
+from agents import WriterAgent, EditorAgent, GrammarAgent, NoisyAgent, ModeratorAgent, SpamAgent, OffTopicAgent, VerboseAgent, InterruptorAgent
 
 console = Console()
 
@@ -32,7 +32,13 @@ class BlackboardSystem:
         self.agents = [
             WriterAgent(self.blackboard),
             EditorAgent(self.blackboard),
-            GrammarAgent(self.blackboard)
+            GrammarAgent(self.blackboard),
+            NoisyAgent(self.blackboard),
+            SpamAgent(self.blackboard),
+            OffTopicAgent(self.blackboard),
+            VerboseAgent(self.blackboard),
+            InterruptorAgent(self.blackboard),
+            ModeratorAgent(self.blackboard),
         ]
         
         self.running = False

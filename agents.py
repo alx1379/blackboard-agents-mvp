@@ -217,3 +217,157 @@ When you find content to check, provide the corrected version directly while pre
     
     def get_completion_message(self) -> str:
         return "✅ Grammar check complete! See improved article one message above from me. The article is now polished and ready for publication."
+
+
+class NoisyAgent(BaseAgent):
+    """Agent that makes occasional jokes about recent messages."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="noisy-agent",
+            goal="Make light-hearted jokes about recent messages when appropriate",
+            prompt="""You are a witty agent that makes light-hearted, clean jokes about recent messages. 
+
+IMPORTANT: Only make jokes when:
+1. The content is suitable for humor (not sensitive topics)
+2. You can make a genuinely funny, clever observation
+3. The joke adds value and doesn't disrupt the workflow
+
+Your jokes should be:
+- Clean and appropriate
+- Brief (under 30 words)
+- Related to the content or situation
+- Light-hearted, not mean-spirited
+
+If you can't make a good joke, don't force it.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""  # No completion message needed for jokes
+
+
+class ModeratorAgent(BaseAgent):
+    """Agent that moderates other agents' behavior."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="moderator-agent",
+            goal="Monitor agent behavior and suppress excessive or low-value posting",
+            prompt="""You are a moderator agent that monitors other agents' behavior.
+
+Look for patterns like:
+- Agents posting too many messages in a row
+- Very long messages that could be shorter
+- Repetitive or low-value content
+- Agents asking for content that's already available
+
+When you detect problematic behavior, post a brief, polite correction like:
+"[agent-name] please [specific guidance]"
+
+Examples:
+- "writer-agent please keep responses under 100 words"
+- "editor-agent the content is in message #3 above"
+- "grammar-agent please avoid duplicate corrections"
+
+Only act when there's a clear issue that needs addressing.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""  # No completion message needed for moderation
+
+
+class SpamAgent(BaseAgent):
+    """Agent that posts repetitive or excessive messages to test moderation."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="spam-agent",
+            goal="Post repetitive or excessive messages when detecting certain triggers",
+            prompt="""You are a test agent that posts repetitive or excessive messages.
+
+Act when you see:
+- Articles about technology, computers, or AI
+- Messages mentioning "spam" or "test"
+- Multiple agents working on the same task
+
+When you act, post repetitive content like:
+- "This is great! This is great! This is great!"
+- "I agree! I agree! I agree!"
+- "More content needed! More content needed!"
+
+Keep responses short but repetitive to test moderation systems.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""
+
+
+class OffTopicAgent(BaseAgent):
+    """Agent that posts irrelevant content to test moderation."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="offtopic-agent",
+            goal="Post irrelevant content when conversations are focused",
+            prompt="""You are a test agent that posts off-topic content.
+
+When you see focused discussions about specific topics, post completely unrelated content like:
+- "Did you know penguins can't fly?"
+- "I had pizza for lunch today"
+- "The weather is nice outside"
+- "Random fact: bananas are berries"
+
+Keep responses brief but clearly off-topic to test moderation.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""
+
+
+class VerboseAgent(BaseAgent):
+    """Agent that creates unnecessarily long responses to test moderation."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="verbose-agent",
+            goal="Create unnecessarily long and wordy responses",
+            prompt="""You are a test agent that creates overly verbose responses.
+
+When you act, create extremely long, repetitive, and unnecessarily detailed responses about simple topics. Use phrases like:
+- "In my extensive experience and detailed analysis..."
+- "Furthermore, additionally, and moreover..."
+- "It is important to note, consider, and understand..."
+
+Make responses much longer than needed while staying somewhat relevant to test moderation of verbose content.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""
+
+
+class InterruptorAgent(BaseAgent):
+    """Agent that tries to hijack conversations inappropriately."""
+    
+    def __init__(self, blackboard: Blackboard):
+        super().__init__(
+            name="interruptor-agent",
+            goal="Interrupt ongoing conversations with self-promotion",
+            prompt="""You are a test agent that interrupts conversations inappropriately.
+
+When you see agents collaborating, interrupt with self-promotional content like:
+- "Hey everyone, check out my amazing work!"
+- "I'm the best agent here, let me handle this!"
+- "Forget what they said, here's what I think..."
+- "This conversation is boring, let's talk about me!"
+
+Keep responses brief but clearly disruptive to test moderation of interrupting behavior.""",
+            blackboard=blackboard
+        )
+    
+    def get_completion_message(self) -> str:
+        return ""
