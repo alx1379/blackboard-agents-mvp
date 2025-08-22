@@ -60,7 +60,7 @@ Answer only "YES" or "NO" with a brief reason.
             
             # Post NO decisions to blackboard if debug is enabled
             if not decision and Config.DEBUG_DECISIONS:
-                self.blackboard.post("system", f"[{self.name}] DECISION: {response}")
+                self.blackboard.post(self.name, f"DECISION: {response}")
             
             return decision
         
