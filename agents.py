@@ -1,8 +1,23 @@
-import openai
+import logging
+import os
+from datetime import datetime
 from typing import List, Dict, Any
 from config import Config
 from blackboard import Blackboard
 from router import Router
+from llm import LLMClient
+
+# Setup prompt logging with unique filename
+os.makedirs("logs", exist_ok=True)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_filename = f"logs/prompts_{timestamp}.log"
+prompt_logger = logging.getLogger("prompt_logger")
+prompt_logger.setLevel(logging.INFO)
+prompt_handler = logging.FileHandler(log_filename)
+prompt_formatter = logging.Formatter("%(asctime)s - %(message)s")
+prompt_handler.setFormatter(prompt_formatter)
+prompt_logger.addHandler(prompt_handler)
+prompt_logger.propagate = False
 
 class BaseAgent:
     """Base class for all LLM-based agents."""
@@ -12,8 +27,8 @@ class BaseAgent:
         self.goal = goal
         self.prompt = prompt
         self.blackboard = blackboard
-        self.router = Router(blackboard)
-        self.client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
+        self.router = Router(blackboard, Config.CONTEXT_WINDOW)
+        self.llm_client = LLMClient()
     
     def should_act(self, context: str) -> bool:
         """Use LLM to decide if agent should act on the given context."""
@@ -27,16 +42,27 @@ Question: Should you act on these messages based on your goal?
 Answer only "YES" or "NO" with a brief reason.
 """
         
+        # Log the decision prompt
+        prompt_logger.info(f"[{self.name}] DECISION PROMPT:\n{decision_prompt}\n{'='*50}")
+        
         try:
-            response = self.client.chat.completions.create(
-                model=Config.OPENAI_MODEL,
+            response = self.llm_client.chat_completion(
                 messages=[{"role": "user", "content": decision_prompt}],
                 max_tokens=50,
                 temperature=0.1
             )
             
-            answer = response.choices[0].message.content.strip().upper()
-            return answer.startswith("YES")
+            # Log the decision response
+            prompt_logger.info(f"[{self.name}] DECISION RESPONSE: {response}\n{'='*50}")
+            
+            answer = response.upper()
+            decision = answer.startswith("YES")
+            
+            # Post NO decisions to blackboard if debug is enabled
+            if not decision and Config.DEBUG_DECISIONS:
+                self.blackboard.post("system", f"[{self.name}] DECISION: {response}")
+            
+            return decision
         
         except Exception as e:
             print(f"Error in decision making for {self.name}: {e}")
@@ -47,21 +73,28 @@ Answer only "YES" or "NO" with a brief reason.
         full_prompt = f"""
 {self.prompt}
 
+IMPORTANT: Keep your response under {Config.AGENT_WORD_LIMIT} words.
+
 Context from blackboard:
 {context}
 
 Please provide your response:
 """
         
+        # Log the processing prompt
+        prompt_logger.info(f"[{self.name}] PROCESSING PROMPT:\n{full_prompt}\n{'='*50}")
+        
         try:
-            response = self.client.chat.completions.create(
-                model=Config.OPENAI_MODEL,
+            response = self.llm_client.chat_completion(
                 messages=[{"role": "user", "content": full_prompt}],
-                max_tokens=Config.OPENAI_MAX_TOKENS,
-                temperature=Config.OPENAI_TEMPERATURE
+                max_tokens=Config.AGENT_WORD_LIMIT * 2,  # Rough estimate for tokens
+                temperature=0.7
             )
             
-            return response.choices[0].message.content.strip()
+            # Log the processing response
+            prompt_logger.info(f"[{self.name}] PROCESSING RESPONSE: {response}\n{'='*50}")
+            
+            return response
         
         except Exception as e:
             return f"Error processing text: {e}"
@@ -75,8 +108,48 @@ Please provide your response:
         context = self.router.format_context(context_messages)
         
         if self.should_act(context):
+            # Post agent selection message
+            self.blackboard.post("system", f"🤖 {self.name} is working on this task...")
+            
             result = self.process_text(context)
             self.blackboard.post(self.name, result)
+            
+            # Only post completion message if agent actually performed the task
+            if self.did_complete_task(result):
+                completion_msg = self.get_completion_message()
+                if completion_msg:
+                    self.blackboard.post(self.name, completion_msg)
+    
+    def get_completion_message(self) -> str:
+        """Get completion message requesting next agent. Override in subclasses."""
+        return ""
+    
+    def did_complete_task(self, result: str) -> bool:
+        """Check if the agent actually completed its task vs gave a generic response."""
+        # Generic responses that indicate the agent didn't do the work
+        generic_phrases = [
+            "please share",
+            "please provide",
+            "certainly!",
+            "i'll help",
+            "i will help",
+            "send me",
+            "give me"
+        ]
+        
+        result_lower = result.lower()
+        
+        # If response contains generic phrases, likely didn't complete task
+        for phrase in generic_phrases:
+            if phrase in result_lower:
+                return False
+        
+        # If response is very short (less than 20 words), likely generic
+        word_count = len(result.split())
+        if word_count < 20:
+            return False
+            
+        return True
 
 
 class WriterAgent(BaseAgent):
@@ -91,6 +164,9 @@ Write engaging, informative content with clear structure including introduction,
 Keep the tone professional but accessible.""",
             blackboard=blackboard
         )
+    
+    def get_completion_message(self) -> str:
+        return "📝 I've drafted an article. See one message above from me. Could someone please have a look and edit it for better style and flow?"
 
 
 class EditorAgent(BaseAgent):
@@ -101,13 +177,21 @@ class EditorAgent(BaseAgent):
             name="editor-agent", 
             goal="Improve writing style, structure, and clarity of text",
             prompt="""You are an experienced editor. Your task is to improve the style, structure, and clarity of written content.
+
+IMPORTANT: Look through the recent messages to find content that needs editing. If you see an article, draft, or text from another agent (like writer-agent), edit that content directly. Do NOT ask for the content to be shared - it's already available in the conversation history.
+
 Focus on:
 - Enhancing readability and flow
 - Improving sentence structure
 - Making the content more engaging
-- Maintaining the original meaning while improving expression""",
+- Maintaining the original meaning while improving expression
+
+When you find content to edit, provide the improved version directly.""",
             blackboard=blackboard
         )
+    
+    def get_completion_message(self) -> str:
+        return "✏️ I've improved the writing style and structure. See one message above from me. Could someone please check for grammar and language errors?"
 
 
 class GrammarAgent(BaseAgent):
@@ -118,11 +202,18 @@ class GrammarAgent(BaseAgent):
             name="grammar-agent",
             goal="Fix grammar, spelling, and language errors in text", 
             prompt="""You are a meticulous grammar checker. Your task is to fix grammar, spelling, punctuation, and other language errors.
+
+IMPORTANT: Look through the recent messages to find content that needs grammar checking. If you see text from another agent (like editor-agent or writer-agent), check and correct that content directly. Do NOT ask for the content to be provided - it's already available in the conversation history.
+
 Focus on:
 - Correcting grammatical mistakes
 - Fixing spelling errors
 - Improving punctuation
 - Ensuring proper sentence structure
-Preserve the original meaning and style while making corrections.""",
+
+When you find content to check, provide the corrected version directly while preserving the original meaning and style.""",
             blackboard=blackboard
         )
+    
+    def get_completion_message(self) -> str:
+        return "✅ Grammar check complete! See improved article one message above from me. The article is now polished and ready for publication."
