@@ -33,11 +33,11 @@ class BlackboardSystem:
             WriterAgent(self.blackboard),
             EditorAgent(self.blackboard),
             GrammarAgent(self.blackboard),
-            NoisyAgent(self.blackboard),
-            SpamAgent(self.blackboard),
-            OffTopicAgent(self.blackboard),
-            VerboseAgent(self.blackboard),
-            InterruptorAgent(self.blackboard),
+            NoisyAgent(self.blackboard), # Makes jokes
+#            SpamAgent(self.blackboard), 
+#            OffTopicAgent(self.blackboard),
+#            VerboseAgent(self.blackboard),
+            InterruptorAgent(self.blackboard), # Violates any rules and keeps prompting himself
             ModeratorAgent(self.blackboard),
         ]
         

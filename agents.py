@@ -34,11 +34,19 @@ class BaseAgent:
         """Use LLM to decide if agent should act on the given context."""
         decision_prompt = f"""
 You are an agent with the following goal: {self.goal}
+Your agent name is: {self.name}
 
 Recent messages from the blackboard:
 {context}
 
-Question: Should you act on these messages based on your goal? 
+IMPORTANT DECISION RULES:
+1. First, check if any message specifically mentions your agent name ({self.name})
+2. If you are mentioned directly, pay special attention to what is being said about you
+3. If someone tells you NOT to act, reply, or stop doing something, you should answer "NO"
+4. If you are specifically asked to do something, consider acting based on your goal
+5. Otherwise, decide based on whether the messages align with your goal
+
+Question: Should you act on these messages based on your goal and the above rules? 
 Answer only "YES" or "NO" with a brief reason.
 """
         
