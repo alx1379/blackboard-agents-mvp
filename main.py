@@ -31,13 +31,13 @@ class BlackboardSystem:
         # Initialize agents
         self.agents = [
             WriterAgent(self.blackboard),
-#            EditorAgent(self.blackboard),
-#            GrammarAgent(self.blackboard),
+            EditorAgent(self.blackboard),
+            GrammarAgent(self.blackboard),
             NoisyAgent(self.blackboard), # Makes jokes
 #            SpamAgent(self.blackboard), 
 #            OffTopicAgent(self.blackboard),
 #            VerboseAgent(self.blackboard),
-#            InterruptorAgent(self.blackboard), # Violates any rules and keeps prompting himself
+            InterruptorAgent(self.blackboard), # Violates any rules and keeps prompting himself
             ModeratorAgent(self.blackboard),
         ]
         

@@ -39,6 +39,11 @@ A minimal multi-agent system where LLM-based agents collaborate through a shared
    ```bash
    pip install -r requirements.txt
    ```
+1.1. **Create a virtual environment**:
+   ```bash
+   python3 -m venv myenv
+   source .venv/bin/activate  # On Windows: myenv\Scripts\activate
+   ```
 
 2. Set your OpenAI API key:
    ```bash
