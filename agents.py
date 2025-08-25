@@ -108,28 +108,21 @@ Please provide your response:
             return f"Error processing text: {e}"
     
     def try_act(self):
-        """Check if agent should act and process if needed."""
+        """Process and act on current context - agents always act now."""
         context_messages = self.router.get_context_for_agent()
         if not context_messages:
             return
         
         context = self.router.format_context(context_messages)
         
-        if self.should_act(context):
-            # Post agent selection message
-            self.blackboard.post("system", f"🤖 {self.name} is working on this task...")
-            
-            result = self.process_text(context)
-            self.blackboard.post(self.name, result)
-            
-            # Only post completion message if agent actually performed the task
-            if self.did_complete_task(result):
-                completion_msg = self.get_completion_message()
-                if completion_msg:
-                    self.blackboard.post(self.name, completion_msg)
+        # Always act - removed should_act check
+        result = self.process_text(context)
+        self.blackboard.post(self.name, result)
+        
+        # Completion messages disabled
     
     def get_completion_message(self) -> str:
-        """Get completion message requesting next agent. Override in subclasses."""
+        """Get completion message requesting next agent. Disabled."""
         return ""
     
     def did_complete_task(self, result: str) -> bool:
