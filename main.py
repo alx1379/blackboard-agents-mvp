@@ -16,6 +16,7 @@ from config import Config
 from blackboard import Blackboard
 from router import Router
 from agents import WriterAgent, EditorAgent, GrammarAgent, NoisyAgent, ModeratorAgent, SpamAgent, OffTopicAgent, VerboseAgent, InterruptorAgent
+from brain_agents import CriticAgent, OpportunistAgent, RationalizerAgent, OptimistAgent, PessimistAgent, DoerAgent, LazyAgent, ProcrastinatorAgent, ConsensusAgent
 
 console = Console()
 
@@ -29,16 +30,17 @@ class BlackboardSystem:
         self.router = Router(self.blackboard, context_window)
         
         # Initialize agents
-        self.agents = [
-            WriterAgent(self.blackboard),
-            EditorAgent(self.blackboard),
-            GrammarAgent(self.blackboard),
-            NoisyAgent(self.blackboard), # Makes jokes
-#            SpamAgent(self.blackboard), 
-#            OffTopicAgent(self.blackboard),
-#            VerboseAgent(self.blackboard),
-            InterruptorAgent(self.blackboard), # Violates any rules and keeps prompting himself
-            ModeratorAgent(self.blackboard),
+        self.agents = [            
+            # Brain model agents (cognitive functions)
+            CriticAgent(self.blackboard),
+            OpportunistAgent(self.blackboard),
+            RationalizerAgent(self.blackboard),
+            OptimistAgent(self.blackboard),
+            PessimistAgent(self.blackboard),
+            DoerAgent(self.blackboard),
+            LazyAgent(self.blackboard),
+            ProcrastinatorAgent(self.blackboard),
+            ConsensusAgent(self.blackboard),            
         ]
         
         self.running = False
